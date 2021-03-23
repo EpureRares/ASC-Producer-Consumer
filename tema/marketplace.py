@@ -6,7 +6,7 @@ Assignment 1
 March 2021
 """
 
-from threading import Lock
+from threading import Lock, Event
 
 class Marketplace:
     """
@@ -22,15 +22,24 @@ class Marketplace:
         """
         self.queue_size_per_producer = queue_size_per_producer
         self.number_producers = 0
+        self.actual_consumer = 0
+        self.available_products = []
+        self.consumers = []
+        self.start_work = Event()
         self.registration_lock = Lock()
+        self.create_cart_lock = Lock()
 
     def register_producer(self):
         """
         Returns an id for the producer that calls this.
         """
-        producer_id = self.number_producers
-        self.number_producers += 1
-        return producer_id
+        with self.registration_lock:
+            producer_id = self.number_producers
+            self.number_producers += 1
+
+        self.available_products.append([])
+
+        return str(producer_id)
 
     def publish(self, producer_id, product):
         """
@@ -49,10 +58,18 @@ class Marketplace:
     def new_cart(self):
         """
         Creates a new cart for the consumer
-
         :returns an int representing the cart_id
         """
-        pass
+        with self.create_cart_lock:
+            cart_id = self.actual_consumer
+            self.actual_consumer += 1
+
+            if self.actual_consumer == 1:
+                self.start_work.set()
+
+        self.consumers.append(cart_id)
+
+        return cart_id
 
     def add_to_cart(self, cart_id, product):
         """
@@ -87,4 +104,5 @@ class Marketplace:
         :type cart_id: Int
         :param cart_id: id cart
         """
-        pass
+        index = self.consumers.index(cart_id)
+        self.consumers.pop(index)

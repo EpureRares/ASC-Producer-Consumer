@@ -1,21 +1,17 @@
 #!/bin/bash
-
 SRC=tema
 TESTS=tests
 OUT=out
-PYTHON_CMD=python3
-
+PYTHON_CMD=/usr/bin/python3
 # Cleanup the previous run's temporary files
 rm -f ${TESTS}/*.out.sorted
-
 # Run tests
-for i in {1..9}
-do
-   rm -f "${TESTS}/0$i".out
-   echo "Starting test $i"
-   ${PYTHON_CMD} test.py "${TESTS}/0$i.in" > "${TESTS}/0$i.out"
-   echo "Finished test $i"
-   ${PYTHON_CMD} check_test.py $i "${TESTS}/0$i.out" "${TESTS}/0$i.ref.out"
+for i in {1..9}; do   
+	rm -f "${TESTS}/0$i".out
+       	echo "Starting test $i"
+	${PYTHON_CMD} test.py "${TESTS}/0$i.in" > "${TESTS}/0$i.out"
+	echo "Finished test $i"
+	${PYTHON_CMD} check_test.py $i "${TESTS}/0$i.out" "${TESTS}/0$i.ref.out"
 done
 
 rm -f "${TESTS}/10".out
