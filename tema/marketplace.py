@@ -6,7 +6,7 @@ Assignment 1
 March 2021
 """
 
-from threading import Lock, Event
+from threading import Lock, Event, RLock
 
 class Marketplace:
     """
@@ -25,6 +25,7 @@ class Marketplace:
         self.actual_consumer = 0
         self.available_products = []
         self.consumers = []
+        self.product_locks = []
         self.start_work = Event()
         self.registration_lock = Lock()
         self.create_cart_lock = Lock()
@@ -36,8 +37,8 @@ class Marketplace:
         with self.registration_lock:
             producer_id = self.number_producers
             self.number_producers += 1
-
-        self.available_products.append([])
+            self.available_products.append([])
+            self.product_locks.append(Lock())
 
         return str(producer_id)
 
@@ -53,7 +54,18 @@ class Marketplace:
 
         :returns True or False. If the caller receives False, it should wait and then try again.
         """
-        pass
+
+        prod_id = int(producer_id)
+        is_queue_full = False
+        var = (self.available_products[prod_id])
+
+        with self.product_locks[prod_id]:
+            if len(var) < self.queue_size_per_producer:
+                self.available_products[prod_id].append((product, RLock(), None))
+            else:
+                is_queue_full = True
+
+        return not is_queue_full
 
     def new_cart(self):
         """
@@ -83,7 +95,19 @@ class Marketplace:
 
         :returns True or False. If the caller receives False, it should wait and then try again
         """
-        pass
+
+        for i in range(len(self.available_products)):
+            with self.product_locks[i]:
+                for j in range(len(self.available_products[i])):
+                    (product_type, lock, cart) = self.available_products[i][j]
+                    if lock.acquire(blocking=False) and product_type == product and cart is None:
+                        lock.acquire(blocking=True)
+                        self.available_products[i][j] = (product_type, lock, cart_id)
+                        return True
+
+        return False
+
+
 
     def remove_from_cart(self, cart_id, product):
         """
@@ -95,7 +119,16 @@ class Marketplace:
         :type product: Product
         :param product: the product to remove from cart
         """
-        pass
+
+        for i in range(len(self.available_products)):
+            for j in range(len(self.available_products[i])):
+                (product_type, lock, cart) = self.available_products[i][j]
+
+                if lock.acquire(blocking=False) and product_type == product and cart == cart_id:
+                    lock.acquire(blocking=True)
+                    self.available_products[i][j] = (product_type, RLock(), None)
+                    lock.release()
+                    return
 
     def place_order(self, cart_id):
         """
@@ -104,5 +137,15 @@ class Marketplace:
         :type cart_id: Int
         :param cart_id: id cart
         """
-        index = self.consumers.index(cart_id)
-        self.consumers.pop(index)
+        list_bought = []
+
+        for i in range(len(self.available_products)):
+            with self.product_locks[i]:
+                for j in range(len(self.available_products[i]) - 1, -1, -1):
+                    (product, lock, cart) = self.available_products[i][j]
+
+                    if cart == cart_id:
+                        list_bought.append(product)
+                        self.available_products[i].pop(j)
+
+        return list_bought

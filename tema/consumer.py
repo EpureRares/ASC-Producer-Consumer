@@ -44,12 +44,10 @@ class Consumer(Thread):
 
         for cart in self.carts:
             for action in cart:
-
                 product = action['product']
                 quantity = action['quantity']
 
                 if action['type'] == 'add':
-
                     while quantity > 0:
                         if self.marketplace.add_to_cart(self.id_cart, product):
                             quantity -= 1
@@ -60,3 +58,11 @@ class Consumer(Thread):
                     while quantity > 0:
                         self.marketplace.remove_from_cart(self.id_cart, product)
                         quantity -= 1
+
+            products = self.marketplace.place_order(self.id_cart)
+            for product in products:
+                command = self.name + " bought " + str(product)
+                print(command, end='\n')
+
+        self.marketplace.consumers.remove(self.id_cart)
+

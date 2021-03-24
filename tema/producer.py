@@ -43,18 +43,17 @@ class Producer(Thread):
 
         self.id = self.marketplace.register_producer()
         self.marketplace.start_work.wait()
-
         index = 0
         while len(self.marketplace.consumers) > 0:
-            index %= 2
+            index %= len(self.products)
 
+            print(index)
             (product, quantity, delay) = self.products[index]
 
-            while quantity > 0:
+            while quantity > 0 and len(self.marketplace.consumers) > 0:
                 if self.marketplace.publish(self.id, product):
                     quantity -= 1
                 else:
                     time.sleep(self.republish_wait_time)
 
             index += 1
-
