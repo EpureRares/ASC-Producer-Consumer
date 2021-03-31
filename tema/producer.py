@@ -32,7 +32,7 @@ class Producer(Thread):
         @param kwargs: other arguments that are passed to the Thread's __init__()
         """
         super().__init__()
-        self.id = None
+        self.daemon = kwargs['daemon']
         self.name = kwargs['name']
         self.products = products
         self.surplus_product = (None, None)
@@ -41,17 +41,16 @@ class Producer(Thread):
 
     def run(self):
 
-        self.id = self.marketplace.register_producer()
-        self.marketplace.start_work.wait()
+        id_producer = self.marketplace.register_producer()
+
         index = 0
-        while len(self.marketplace.consumers) > 0:
+        while self.daemon:
             index %= len(self.products)
 
-            print(index)
-            (product, quantity, delay) = self.products[index]
+            (product, quantity, _) = self.products[index]
 
-            while quantity > 0 and len(self.marketplace.consumers) > 0:
-                if self.marketplace.publish(self.id, product):
+            while quantity > 0:
+                if self.marketplace.publish(id_producer, product):
                     quantity -= 1
                 else:
                     time.sleep(self.republish_wait_time)
