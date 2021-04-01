@@ -8,6 +8,9 @@ March 2021
 import time
 from threading import Thread
 
+name = 'name'
+daemon = 'daemon'
+
 
 class Producer(Thread):
     """
@@ -32,8 +35,8 @@ class Producer(Thread):
         @param kwargs: other arguments that are passed to the Thread's __init__()
         """
         super().__init__()
-        self.daemon = kwargs['daemon']
-        self.name = kwargs['name']
+        self.daemon = kwargs[daemon]
+        self.name = kwargs[name]
         self.products = products
         self.surplus_product = (None, None)
         self.marketplace = marketplace
@@ -42,13 +45,21 @@ class Producer(Thread):
     def run(self):
 
         id_producer = self.marketplace.register_producer()
-
         index = 0
+
+        """
+        se produce in continu pana cand este semnalizat faptul ca
+        main-ul s-a terminat 
+        """
         while self.daemon:
             index %= len(self.products)
 
             (product, quantity, _) = self.products[index]
 
+            """
+            se incearca se se publice toata cantitatea de produse
+            generate dintr-un tip
+            """
             while quantity > 0:
                 if self.marketplace.publish(id_producer, product):
                     quantity -= 1

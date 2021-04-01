@@ -59,9 +59,14 @@ class Marketplace:
         is_queue_full = False
         var = (self.available_products[prod_id])
 
+        """
+        producatorul adauga elemente doar in coada sa 
+        prin variabila is_queue_full se verifica daca
+        s-a ajuns la dimensiunea maxima a cozii
+        """
         with self.product_locks[prod_id]:
             if len(var) < self.queue_size_per_producer:
-                self.available_products[prod_id].append((product, RLock(), None))
+                self.available_products[prod_id].append((product, None))
             else:
                 is_queue_full = True
 
@@ -93,14 +98,21 @@ class Marketplace:
         :returns True or False. If the caller receives False, it should wait and then try again
         """
 
+        """
+        consumatorul cauta in toate cozile pana cand gaseste elementelul pe care le cauta
+        doar un consumator sau doar un producator are acces la un moment dat 
+        la o anumita coada
+        pentru a marca un element intr-un cos de cumparaturi se adauga id-ul cosului langa
+        produsul respectiv
+        """
         for i in range(len(self.available_products)):
             with self.product_locks[i]:
 
                 for j in range(len(self.available_products[i])):
-                    (product_type, lock, cart) = self.available_products[i][j]
+                    (product_type, cart) = self.available_products[i][j]
 
                     if product_type == product and cart is None:
-                        self.available_products[i][j] = (product_type, lock, cart_id)
+                        self.available_products[i][j] = (product_type, cart_id)
                         return True
 
         return False
@@ -115,13 +127,18 @@ class Marketplace:
         :type product: Product
         :param product: the product to remove from cart
         """
+
+        """
+        pentru a elimina un element din cos se cauta in toate cozile elementul
+        respectiv care are asociat id-ul cosului de cumparaturi
+        """
         for i in range(len(self.available_products)):
             with self.product_locks[i]:
                 for j in range(len(self.available_products[i])):
-                    (product_type, _, cart) = self.available_products[i][j]
+                    (product_type, cart) = self.available_products[i][j]
 
                     if product_type == product and cart == cart_id:
-                        self.available_products[i][j] = (product_type, RLock(), None)
+                        self.available_products[i][j] = (product_type, None)
                         return
 
     def place_order(self, cart_id):
@@ -136,7 +153,7 @@ class Marketplace:
         for i in range(len(self.available_products)):
             with self.product_locks[i]:
                 for j in range(len(self.available_products[i]) - 1, -1, -1):
-                    (product, _, cart) = self.available_products[i][j]
+                    (product, cart) = self.available_products[i][j]
 
                     if cart == cart_id:
                         list_bought.append(product)
